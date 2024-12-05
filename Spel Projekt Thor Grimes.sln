@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35219.272
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spel Projekt Thor Grimes", "Spel Projekt Thor Grimes.csproj", "{9B678F0F-A8D9-48DC-8B03-3EDBA150311F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9B678F0F-A8D9-48DC-8B03-3EDBA150311F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B678F0F-A8D9-48DC-8B03-3EDBA150311F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B678F0F-A8D9-48DC-8B03-3EDBA150311F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B678F0F-A8D9-48DC-8B03-3EDBA150311F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {586F1FDF-3319-4CD5-8EDA-F3CEBAC32A9E}
+	EndGlobalSection
+EndGlobal
