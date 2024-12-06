@@ -12,19 +12,24 @@ namespace Spel_Projekt_Thor_Grimes
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
         Texture2D basic;
-        Texture2D MMButton;
+        Texture2D Button;
+        SpriteFont MMFont;
+        SpriteFont Font;
         List<Rectangle> Squares = new List<Rectangle>();
         List<Rectangle> Walls = new List<Rectangle>();
         List<Vector2> Velocity = new List<Vector2>();
-        bool MainMenu = true;
-        bool debug = true;
+        int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
+        bool debug = false;
         bool rel = false;
         Vector2 mousepos;
         List<Rectangle> rectangles = new List<Rectangle>();
         Rectangle rectangle;
-        SpriteFont font;
         MouseState mouse;
         MouseState oldmouse;
+        float globalhoverdarken = 1; // global used for sprites, local used for rectangles
+        List<float> localhoverdarken = new List<float>();
+        List<Rectangle> LSRectangle = new List<Rectangle>();
+        Dictionary<string, Vector2> LSText = new Dictionary<string, Vector2>();
 
         public Game1()
         {
@@ -36,8 +41,9 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-            
+            LSRectangle.Add(new Rectangle(25, 400, 90, 35));
+            LSText.Add("Back", new Vector2(55, 412));
+            localhoverdarken.Add(1);
             base.Initialize();
         }
 
@@ -45,8 +51,9 @@ namespace Spel_Projekt_Thor_Grimes
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
             basic = Content.Load<Texture2D>("basic");
-            font = Content.Load<SpriteFont>("Font");
-            MMButton = Content.Load<Texture2D>("button_rectangle_border");
+            MMFont = Content.Load<SpriteFont>("Font");
+            Font = Content.Load<SpriteFont>("smallFont");
+            Button = Content.Load<Texture2D>("button_rectangle_border");
             mouse = Mouse.GetState();
             oldmouse = Mouse.GetState();
         }
@@ -57,15 +64,19 @@ namespace Spel_Projekt_Thor_Grimes
                 Exit();
             oldmouse = mouse;
             mouse = Mouse.GetState();
-            if (MainMenu)
-            {
-                GameUpdate();
-            }
-            else
+            if (gamestate == 0)
             {
                 MMUpdate();
             }
-            if (debug)
+            else if (gamestate == 1)
+            {
+                LevelSelectorUpdate();
+            }
+            else if (gamestate == 2)
+            {
+                GameUpdate();
+            }
+            if (debug) // debug mode allows you to create rectangles and get their information so it can be imported into the game
             {
                 if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed)
                 {
@@ -102,35 +113,73 @@ namespace Spel_Projekt_Thor_Grimes
                     rel = !rel;
                 }
             }
-                // TODO: Add your update logic here
-                void MMUpdate()
+            void MMUpdate()
+            {
+                if (new Rectangle(300, 200, 190, 65).Contains(mouse.Position)) // make new rectangle which is the hitbox of the play button, if mouse is within the rectangle then darken the play button
                 {
-                    if (true)
+                    globalhoverdarken = 0.8f;
+                    if (mouse.LeftButton == ButtonState.Pressed)
                     {
-
+                        gamestate++;
                     }
                 }
-                void GameUpdate()
+                else // if it doesn't contain then set back to 1 (full brightness)
                 {
-
+                    globalhoverdarken = 1;
                 }
-                base.Update(gameTime);
-            } 
+            }
+            void LevelSelectorUpdate()
+            {
+                for (int i = 0; i < LSRectangle.Count(); i++)
+                {
+                    if (LSRectangle[i].Contains(mouse.Position))
+                    {
+                        localhoverdarken[i] = 0.8f;
+                        if (mouse.LeftButton == ButtonState.Pressed )
+                        {
+                            var text = LSText.ElementAt(i).Key;
+                            if (text.Contains("B"))
+                            {
+                                gamestate--;
+                            }
+                            else if (text.Contains("1"))
+                            {
+
+                            }
+                        }
+                    }
+                    else
+                    {
+                        localhoverdarken[i] = 1;
+                    }
+                }
+            }
+            void GameUpdate()
+            {
+
+            }
+            base.Update(gameTime);
+        }
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(Color.DarkBlue*0.5F);
 
             spriteBatch.Begin();
-            if (MainMenu)
+            if (gamestate == 0)
             {
-                spriteBatch.DrawString(font, "Placeholder", new Vector2(325, 100), Color.White);
-                spriteBatch.Draw(MMButton, new Vector2(300, 200), Color.White);
-                spriteBatch.DrawString(font, "PLAY!", new Vector2(365, 225), Color.DeepSkyBlue);
+                spriteBatch.DrawString(MMFont, "Placeholder", new Vector2(325, 100), Color.White);
+                spriteBatch.Draw(Button, new Vector2(300, 200), Color.White * globalhoverdarken);
+                spriteBatch.DrawString(MMFont, "PLAY!", new Vector2(365, 225), Color.DeepSkyBlue * globalhoverdarken);
             }
-            else
+            else if (gamestate == 1)
             {
-
+                for (int i = 0; i < LSRectangle.Count(); i++)
+                {
+                    var element = LSText.ElementAt(i);
+                    spriteBatch.Draw(Button, LSRectangle[i], Color.White * localhoverdarken[i]);
+                    spriteBatch.DrawString(Font, element.Key, element.Value, Color.DeepSkyBlue * localhoverdarken[i]);
+                }
             }
             foreach (var item in rectangles)
             {
@@ -138,7 +187,7 @@ namespace Spel_Projekt_Thor_Grimes
             }
             if (rectangles.Count() != 0)
             {
-                spriteBatch.DrawString(font, rectangles.Last().ToString(), new Vector2(400, 10), Color.White);
+                spriteBatch.DrawString(MMFont, gamestate.ToString(), new Vector2(400, 10), Color.White);
             }
             spriteBatch.End();
             base.Draw(gameTime);
