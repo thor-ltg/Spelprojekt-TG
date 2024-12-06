@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Spel_Projekt_Thor_Grimes
 {
@@ -15,9 +17,15 @@ namespace Spel_Projekt_Thor_Grimes
         List<Rectangle> Walls = new List<Rectangle>();
         List<Vector2> Velocity = new List<Vector2>();
         bool MainMenu = true;
+        bool debug = true;
+        bool rel = false;
+        Vector2 mousepos;
+        List<Rectangle> rectangles = new List<Rectangle>();
+        Rectangle rectangle;
         SpriteFont font;
         MouseState mouse;
         MouseState oldmouse;
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -51,26 +59,63 @@ namespace Spel_Projekt_Thor_Grimes
             mouse = Mouse.GetState();
             if (MainMenu)
             {
-                MMUpdate();
+                GameUpdate();
             }
             else
             {
-                GameUpdate();
+                MMUpdate();
             }
-            // TODO: Add your update logic here
-            void MMUpdate()
+            if (debug)
             {
-                if (true)
+                if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed)
+                {
+                    if (rel)
+                    {
+                        if (mouse.Position.X < mousepos.X)
+                        {
+                            if (mouse.Position.Y < mousepos.Y)
+                            {
+                                rectangle = new Rectangle(mouse.Position.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
+                            }
+                            else
+                            {
+                                rectangle = new Rectangle(mouse.Position.X, (int)mousepos.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
+                            }
+                        }
+                        else
+                        {
+                            if (mouse.Position.Y < mousepos.Y)
+                            {
+                                rectangle = new Rectangle((int)mousepos.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
+                            }
+                            else
+                            {
+                                rectangle = new Rectangle((int)mousepos.X, (int)mousepos.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
+                            }
+                        }
+                        rectangles.Add(rectangle);
+                    }
+                    else
+                    {
+                        mousepos = mouse.Position.ToVector2();
+                    }
+                    rel = !rel;
+                }
+            }
+                // TODO: Add your update logic here
+                void MMUpdate()
+                {
+                    if (true)
+                    {
+
+                    }
+                }
+                void GameUpdate()
                 {
 
                 }
-            }
-            void GameUpdate()
-            {
-
-            }
-            base.Update(gameTime);
-        }
+                base.Update(gameTime);
+            } 
 
         protected override void Draw(GameTime gameTime)
         {
@@ -86,6 +131,14 @@ namespace Spel_Projekt_Thor_Grimes
             else
             {
 
+            }
+            foreach (var item in rectangles)
+            {
+                spriteBatch.Draw(basic, item, Color.White);
+            }
+            if (rectangles.Count() != 0)
+            {
+                spriteBatch.DrawString(font, rectangles.Last().ToString(), new Vector2(400, 10), Color.White);
             }
             spriteBatch.End();
             base.Draw(gameTime);
