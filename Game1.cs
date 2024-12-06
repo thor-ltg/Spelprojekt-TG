@@ -15,9 +15,7 @@ namespace Spel_Projekt_Thor_Grimes
         Texture2D Button;
         SpriteFont MMFont;
         SpriteFont Font;
-        List<Rectangle> Squares = new List<Rectangle>();
         List<Rectangle> Walls = new List<Rectangle>();
-        List<Vector2> Velocity = new List<Vector2>();
         int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
         bool debug = false;
         bool rel = false;
@@ -26,10 +24,15 @@ namespace Spel_Projekt_Thor_Grimes
         Rectangle rectangle;
         MouseState mouse;
         MouseState oldmouse;
+        Rectangle[] player = new Rectangle[4];
+        Vector2[] velo = new Vector2[4];
         float globalhoverdarken = 1; // global used for sprites, local used for rectangles
         List<float> localhoverdarken = new List<float>();
         List<Rectangle> LSRectangle = new List<Rectangle>();
         Dictionary<string, Vector2> LSText = new Dictionary<string, Vector2>();
+        int level;
+        Dictionary<int, Vector2> startpos = new Dictionary<int, Vector2>(); // to be removed
+        Dictionary<int, Dictionary<int, Vector2>> startingpos = new Dictionary<int, Dictionary<int, Vector2>>(); // first int = level, 2nd int = player nr vector2 is pos
 
         public Game1()
         {
@@ -41,9 +44,19 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Initialize()
         {
+            for (int i = 0; i < 2; i++)
+            {
+                localhoverdarken.Add(1);
+            }
             LSRectangle.Add(new Rectangle(25, 400, 90, 35));
             LSText.Add("Back", new Vector2(55, 412));
-            localhoverdarken.Add(1);
+            LSRectangle.Add(new Rectangle(25, 100, 100, 35));
+            LSText.Add("Level 1", new Vector2(52, 112));
+            startpos.Add(0, new Vector2(100, 400));
+            startpos.Add(1, new Vector2(200, 400));
+            startpos.Add(2, new Vector2(300, 400));
+            startpos.Add(3, new Vector2(400, 400));
+            startingpos.Add(1, startpos);
             base.Initialize();
         }
 
@@ -138,13 +151,16 @@ namespace Spel_Projekt_Thor_Grimes
                         if (mouse.LeftButton == ButtonState.Pressed )
                         {
                             var text = LSText.ElementAt(i).Key;
-                            if (text.Contains("B"))
+                            if (text.Contains("Back"))
                             {
                                 gamestate--;
                             }
-                            else if (text.Contains("1"))
+                            else if (text.Contains("Level"))
                             {
-
+                                string[] strings = text.Split(' ');
+                                int level = int.Parse(strings[1]);
+                                InitializeLevel();
+                                gamestate++;
                             }
                         }
                     }
@@ -156,7 +172,16 @@ namespace Spel_Projekt_Thor_Grimes
             }
             void GameUpdate()
             {
-
+                
+            }
+            void InitializeLevel()
+            {
+                for (int i = 0; i < startingpos[1].Count(); i++)
+                {
+                    var pos = startingpos[1].ElementAt(i).Value;
+                    Rectangle playerrec = new Rectangle((int)pos.X, (int)pos.Y, 15, 15);
+                    player[i] = playerrec;
+                }
             }
             base.Update(gameTime);
         }
@@ -170,7 +195,7 @@ namespace Spel_Projekt_Thor_Grimes
             {
                 spriteBatch.DrawString(MMFont, "Placeholder", new Vector2(325, 100), Color.White);
                 spriteBatch.Draw(Button, new Vector2(300, 200), Color.White * globalhoverdarken);
-                spriteBatch.DrawString(MMFont, "PLAY!", new Vector2(365, 225), Color.DeepSkyBlue * globalhoverdarken);
+                spriteBatch.DrawString(MMFont, "PLAY!", new Vector2(370, 225), Color.DeepSkyBlue * globalhoverdarken);
             }
             else if (gamestate == 1)
             {
@@ -179,6 +204,13 @@ namespace Spel_Projekt_Thor_Grimes
                     var element = LSText.ElementAt(i);
                     spriteBatch.Draw(Button, LSRectangle[i], Color.White * localhoverdarken[i]);
                     spriteBatch.DrawString(Font, element.Key, element.Value, Color.DeepSkyBlue * localhoverdarken[i]);
+                }
+            }
+            else if (gamestate == 2)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    spriteBatch.Draw(basic, player[i], Color.White);
                 }
             }
             foreach (var item in rectangles)
