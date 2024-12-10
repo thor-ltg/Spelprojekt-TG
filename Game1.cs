@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 
@@ -18,7 +19,7 @@ namespace Spel_Projekt_Thor_Grimes
         SpriteFont Font;
         List<Rectangle> Walls = new List<Rectangle>();
         int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
-        bool debug = true;
+        bool debug = false;
         bool rel = false;
         Vector2 mousepos;
         List<Rectangle> rectangles = new List<Rectangle>();
@@ -34,6 +35,8 @@ namespace Spel_Projekt_Thor_Grimes
         int level;
         Dictionary<int, Dictionary<int, Vector2>> startingpos = new Dictionary<int, Dictionary<int, Vector2>>(); // first int = level, 2nd int = player nr vector2 is pos
         Dictionary<int, List<Rectangle>> levellistrectangles = new Dictionary<int, List<Rectangle>>(); // int = level, rectangle = rectangle
+        Dictionary<int, Color> playercolor = new Dictionary<int, Color>(); // int = playernr, color = color
+        Dictionary<int, Rectangle> win = new Dictionary<int, Rectangle>(); // int = level rec = pos
 
         public Game1()
         {
@@ -49,6 +52,10 @@ namespace Spel_Projekt_Thor_Grimes
             {
                 localhoverdarken.Add(1);
             }
+            playercolor[0] = Color.Red;
+            playercolor[1] = Color.Blue;
+            playercolor[2] = Color.Yellow;
+            playercolor[3] = Color.Green;
             LSRectangle.Add(new Rectangle(25, 400, 90, 35));
             LSText.Add("Back", new Vector2(55, 412));
             LSRectangle.Add(new Rectangle(25, 100, 100, 35));
@@ -60,12 +67,21 @@ namespace Spel_Projekt_Thor_Grimes
             startpos.Add(3, new Vector2(400, 400));
             startingpos.Add(1, startpos);
             List<Rectangle> l = new List<Rectangle>();
-            Rectangle r = new Rectangle(0, 0, 100, 500);
-            l.Add(r);
-            r = new Rectangle(0, 0, 800, 100);
-            l.Add(r);
+            l.Add(new Rectangle(0, 0, 10, 430));
+            l.Add(new Rectangle(0, 0, 500, 10));
+            l.Add(new Rectangle(500, 0, 10, 440));
+            l.Add(new Rectangle(0, 430, 500, 10));
+            l.Add(new Rectangle(50, 300, 5, 130));
+            l.Add(new Rectangle(150, 300, 5, 130));
+            l.Add(new Rectangle(250, 300, 5, 130));
+            l.Add(new Rectangle(350, 300, 5, 130));
+            l.Add(new Rectangle(450, 300, 5, 130));
+            l.Add(new Rectangle(0, 300, 50, 5));
+            l.Add(new Rectangle(450, 300, 50, 5));
+            l.Add(new Rectangle(230, 0, 5, 50));
+            l.Add(new Rectangle(270, 0, 5, 50));
             levellistrectangles.Add(1, l);
-
+            win[1] = new Rectangle(235, 0, 35, 50);
             base.Initialize();
         }
 
@@ -151,7 +167,7 @@ namespace Spel_Projekt_Thor_Grimes
                     globalhoverdarken = 1;
                 }
             }
-            void LevelSelectorUpdate()
+            void LevelSelectorUpdate() // || LEVEL SELECTION METHOD
             {
                 for (int i = 0; i < LSRectangle.Count(); i++)
                 {
@@ -180,29 +196,30 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                 }
             }
-            void GameUpdate()
+            void GameUpdate() // || GAME UPDATE METHOD
             {
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++) // VELOCITY
                 {
                     player[i].X += (int)velo[i].X;
                     player[i].Y += (int)velo[i].Y;
                 }
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++) // || COLLISION DETECTION
                 {
+                    Rectangle playerax = new Rectangle((int)(player[i].X + velo[i].X), player[i].Y, player[i].Width, player[i].Height); // player after x
+                    Rectangle playeray = new Rectangle(player[i].X, (int)(player[i].Y + velo[i].Y), player[i].Width, player[i].Height); // player after y
+                    Rectangle playerav = new Rectangle((int)(player[i].X + velo[i].X), (int)(player[i].Y + velo[i].Y), player[i].Width, player[i].Height); // player after velocity
                     List<Rectangle> currec = levellistrectangles[level];
                     for (int j = 0; j < currec.Count(); j++)
                     {
-                        if (player[i].Intersects(currec[j]))
+                        if (playerav.Intersects(currec[j]))
                         {
-                            Rectangle playerbx = new Rectangle((int)(player[i].X + velo[i].X), player[i].Y, player[i].Width, player[i].Height); // player before x
-                            Rectangle playerby = new Rectangle(player[i].X, (int)(player[i].Y + velo[i].Y), player[i].Width, player[i].Height); // player before y
-                            if (playerby.Intersects(currec[j]))
-                            {
-                                velo[i].Y *= -1;
-                            }
-                            else if (playerbx.Intersects(currec[j]))
+                            if (playerax.Intersects(currec[j]))
                             {
                                 velo[i].X *= -1;
+                            }
+                            else if (playeray.Intersects(currec[j]))
+                            {
+                                velo[i].Y *= -1;
                             }
                             else
                             {
@@ -210,11 +227,46 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                         }
                     }
+                    for (int j = 0; j < 4; j++) // || PLAYER ON PLAYER COLLISION
+                    {
+                        Dictionary<int, int> pair = new Dictionary<int, int>();
+                        if (i == j)
+                        {
+                            continue;
+                        }
+                        if (pair.ContainsKey(j) && pair.ContainsValue(i))
+                        {
+                            continue;
+                        }
+                        if (playerav.Intersects(player[j]))
+                        {
+                            if (playerax.Intersects(player[j]))
+                            {
+                                velo[i].X *= -1;
+                                velo[j].X *= -1;
+                                pair.Add(i, j);
+                            }
+                            else if (playeray.Intersects(player[j]))
+                            {
+                                velo[i].Y *= -1;
+                                velo[j].Y *= -1;
+                                pair.Add(i, j);
+                            }
+                            else
+                            {
+                                velo[i] *= -1;
+                            }
+                        }
+                    }
+                    if (player[i].Contains(win[level]) || Keyboard.GetState().IsKeyDown(Keys.A))
+                    {
+                        gamestate = 0;
+                    }
                 }
             }
             void InitializeLevel()
             {
-                for (int i = 0; i < startingpos[level].Count(); i++) // TODO fix level int so it represents level, didn't work when i had [level]
+                for (int i = 0; i < startingpos[level].Count(); i++) 
                 {
                     var pos = startingpos[level].ElementAt(i).Value;
                     Rectangle playerrec = new Rectangle((int)pos.X, (int)pos.Y, 15, 15);
@@ -266,9 +318,10 @@ namespace Spel_Projekt_Thor_Grimes
             }
             else if (gamestate == 2)
             {
+                spriteBatch.Draw(basic, win[level], Color.Gold);
                 for (int i = 0; i < 4; i++)
                 {
-                    spriteBatch.Draw(basic, player[i], Color.White);
+                    spriteBatch.Draw(basic, player[i], playercolor[i]);
                 }
                 List<Rectangle> currec = levellistrectangles[level];
                 for (int i = 0; i < currec.Count(); i++)
