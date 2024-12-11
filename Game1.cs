@@ -225,6 +225,7 @@ namespace Spel_Projekt_Thor_Grimes
                             {
                                 velo[i] *= -1;
                             }
+                            break;
                         }
                     }
                     for (int j = 0; j < 4; j++) // || PLAYER ON PLAYER COLLISION
@@ -243,13 +244,10 @@ namespace Spel_Projekt_Thor_Grimes
                             if (playerax.Intersects(player[j]))
                             {
                                 velo[i].X *= -1;
-                                velo[j].X *= -1;
-                                pair.Add(i, j);
                             }
                             else if (playeray.Intersects(player[j]))
                             {
                                 velo[i].Y *= -1;
-                                velo[j].Y *= -1;
                                 pair.Add(i, j);
                             }
                             else
