@@ -4,14 +4,18 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Microsoft.Xna.Framework.Media;
+using Microsoft.Xna.Framework.Audio;
 
 
 namespace Spel_Projekt_Thor_Grimes
 {
     public class Game1 : Game
     {
+        SoundEffect hit;
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
         Texture2D basic;
@@ -41,6 +45,7 @@ namespace Spel_Projekt_Thor_Grimes
         Dictionary<int, Rectangle> win = new Dictionary<int, Rectangle>(); // int = level rec = pos
         Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>> moving = new Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>>(); // first int = levelnr, rectangle = startpos 2nd int = length units/frame vector2 = end pos
         List<Vector2> start = new List<Vector2>();
+        Vector2 pan;
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -83,10 +88,10 @@ namespace Spel_Projekt_Thor_Grimes
             l.Add(new Rectangle(450, 300, 5, 130));
             l.Add(new Rectangle(0, 300, 50, 5));
             l.Add(new Rectangle(450, 300, 50, 5));
-            l.Add(new Rectangle(230, 0, 5, 50));
-            l.Add(new Rectangle(270, 0, 5, 50));
+            l.Add(new Rectangle(215, 0, 5, 50));
+            l.Add(new Rectangle(285, 0, 5, 50));
             levellistrectangles.Add(1, l);
-            win[1] = new Rectangle(235, 0, 35, 50);
+            win[1] = new Rectangle(215, 0, 70, 50);
             t[1] = new Vector2(200, 100);
             m[new Rectangle(100, 200, 25, 25)] = t;
             moving[1] = m;
@@ -103,6 +108,7 @@ namespace Spel_Projekt_Thor_Grimes
             Button = Content.Load<Texture2D>("button_rectangle_border");
             mouse = Mouse.GetState();
             oldmouse = Mouse.GetState();
+            hit = Content.Load<SoundEffect>("hit"); // || https://pixabay.com/sound-effects/plastic-hit-3-34297/ by freesound_community, sound was cropped to 0.25 seconds
         }
 
         protected override void Update(GameTime gameTime)
@@ -207,10 +213,37 @@ namespace Spel_Projekt_Thor_Grimes
             }
             void GameUpdate() // || GAME UPDATE METHOD
             {
-                for (int i = 0; i < 4; i++) // VELOCITY
+                for (int i = 0; i < 4; i++) // || VELOCITY
                 {
                     player[i].X += (int)velo[i].X;
                     player[i].Y += (int)velo[i].Y;
+                }
+                for (int i = 0; i < moving[level].Count(); i++) // || MOVING PART LOGIC
+                {
+                    var elements = moving[level].ElementAt(i);
+                    var intv2a = elements.Value;
+                    var intv2 = intv2a.ElementAt(0);
+
+                    Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>> temp = new Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>>();
+                    Dictionary<Rectangle, Dictionary<int, Vector2>> temp2 = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
+                    Dictionary<int, Vector2> temp3 = new Dictionary<int, Vector2>();
+                    temp3[intv2.Key] = intv2.Value;
+                    Rectangle r;
+                    if (m)
+                    {
+                        r = new Rectangle(elements.Key.X + intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
+                    }
+                    else
+                    {
+                        r = new Rectangle(elements.Key.X - intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
+                    }
+                    temp2[r] = temp3;
+                    temp[level] = temp2;
+                    if (r.X > intv2.Value.X || r.X < start[level - 1].X)
+                    {
+                        m = !m;
+                    }
+                    moving = temp;
                 }
                 for (int i = 0; i < 4; i++) // || COLLISION DETECTION
                 {
@@ -225,78 +258,96 @@ namespace Spel_Projekt_Thor_Grimes
                             if (playerax.Intersects(currec[j]))
                             {
                                 velo[i].X *= -1;
+                                hit.Play();
                             }
                             else if (playeray.Intersects(currec[j]))
                             {
                                 velo[i].Y *= -1;
+                                hit.Play();
                             }
                             else
                             {
                                 velo[i] *= -1;
+                                hit.Play();
                             }
                             break;
                         }
                     }
                     for (int j = 0; j < 4; j++) // || PLAYER ON PLAYER COLLISION
                     {
+                        Rectangle player2av = new Rectangle((int)(player[j].X + velo[j].X), (int)(player[j].Y + velo[j].Y), player[j].Width, player[j].Height);
                         if (i == j)
                         {
                             continue;
                         }
-                        if (playerav.Intersects(player[j]))
+                        if (playerav.Intersects(player2av))
                         {
-                            if (playerax.Intersects(player[j]))
+                            if (playerax.Intersects(player2av))
                             {
                                 velo[i].X *= -1;
                                 velo[j].X *= -1;
+                                hit.Play();
                                 continue;
                             }
-                            if (playeray.Intersects(player[j]))
+                            if (playeray.Intersects(player2av))
                             {
                                 velo[i].Y *= -1;
                                 velo[j].Y *= -1;
+                                hit.Play();
                                 continue;
                             }
-                            if (!(playerax.Intersects(player[j])) &! playeray.Intersects(player[j]))
+                            if (!(playerax.Intersects(player2av)) &! playeray.Intersects(player2av))
                             {
                                 velo[i] *= -1;
+                                hit.Play();
                             }
                         }
                     }
-                    if (player[i].Contains(win[level]) || Keyboard.GetState().IsKeyDown(Keys.A))
+                    for (int j = 0; j < moving[level].Count; j++) // || PLAYER ON MOVING COLLISION
+                    {
+                        var elements = moving[level].ElementAt(j);
+                        if (playerav.Intersects(elements.Key))
+                        {
+                            if (playerax.Intersects(elements.Key))
+                            {
+                                velo[i].X *= -1;
+                                hit.Play();
+                            }
+                            else if (playeray.Intersects(elements.Key))
+                            {
+                                velo[i].Y *= -1;
+                                hit.Play();
+                            }
+                            else
+                            {
+                                velo[i] *= -1;
+                                hit.Play();
+                            }
+                        }
+                    }
+                    if (win[level].Contains(player[i]))
                     {
                         gamestate = 1;
                     }
                 }
-                for (int i = 0; i < moving[level].Count(); i++)
+                if (Keyboard.GetState().IsKeyDown(Keys.Up))
                 {
-                    var elements = moving[level].ElementAt(i);
-                    var intv2a = elements.Value;
-                    var intv2 = intv2a.ElementAt(0);
-
-                        Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>> temp = new Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>>();
-                        Dictionary<Rectangle, Dictionary<int, Vector2>> temp2 = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
-                        Dictionary<int, Vector2> temp3 = new Dictionary<int, Vector2>();
-                        temp3[intv2.Key] = intv2.Value;
-                    Rectangle r;
-                    if (m)
-                    {
-                         r = new Rectangle(elements.Key.X + intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
-                    }
-                    else
-                    {
-                         r = new Rectangle(elements.Key.X - intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
-                    }
-                        temp2[r] = temp3;
-                        temp[level] = temp2;
-                        if (r.X > intv2.Value.X || r.X < start[level-1].X)
-                        {
-                            m = !m;
-                        }
-                        moving = temp;
+                    pan.Y++;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.Down))
+                {
+                    pan.Y--;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.Right))
+                {
+                    pan.X--;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.Left))
+                {
+                    pan.X++;
                 }
             }
-            void InitializeLevel()
+            void InitializeLevel() // || INITALIZE LEVEL METHOD
             {
                 for (int i = 0; i < startingpos[level].Count(); i++) 
                 {
@@ -351,20 +402,24 @@ namespace Spel_Projekt_Thor_Grimes
             }
             else if (gamestate == 2)
             {
-                spriteBatch.Draw(basic, win[level], Color.Gold);
+                Rectangle pwin = new Rectangle((int)(win[level].X + pan.X), (int)(win[level].Y+pan.Y), win[level].Width, win[level].Height);
+                spriteBatch.Draw(basic, pwin, Color.Gold);
+                for (int i = 0; i < moving[level].Count(); i++)
+                {
+                    var elements = moving[level].ElementAt(i);
+                    Rectangle pmoving = new Rectangle((int)(elements.Key.X + pan.X), (int)(elements.Key.Y + pan.Y), elements.Key.Width, elements.Key.Height);
+                    spriteBatch.Draw(basic, pmoving, Color.White);
+                }
                 for (int i = 0; i < 4; i++)
                 {
-                    spriteBatch.Draw(basic, player[i], playercolor[i]);
+                    Rectangle pplayer = new Rectangle((int)(player[i].X + pan.X), (int)(player[i].Y + pan.Y), player[i].Width, player[i].Height);
+                    spriteBatch.Draw(basic, pplayer, playercolor[i]);
                 }
                 List<Rectangle> currec = levellistrectangles[level];
                 for (int i = 0; i < currec.Count(); i++)
                 {
-                    spriteBatch.Draw(basic, currec[i], Color.White);
-                }
-                for (int i = 0; i < moving[level].Count(); i++)
-                {
-                    var elements = moving[level].ElementAt(i);
-                    spriteBatch.Draw(basic, elements.Key, Color.White);
+                    Rectangle pcurrec = new Rectangle((int)(currec[i].X + pan.X), (int)(currec[i].Y + pan.Y), currec[i].Width, currec[i].Height);
+                    spriteBatch.Draw(basic, pcurrec, Color.White);
                 }
             }
             foreach (var item in rectangles)
