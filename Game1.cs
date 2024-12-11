@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 
 
 namespace Spel_Projekt_Thor_Grimes
@@ -21,6 +22,7 @@ namespace Spel_Projekt_Thor_Grimes
         int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
         bool debug = false;
         bool rel = false;
+        bool m = true;
         Vector2 mousepos;
         List<Rectangle> rectangles = new List<Rectangle>();
         Rectangle rectangle;
@@ -37,7 +39,8 @@ namespace Spel_Projekt_Thor_Grimes
         Dictionary<int, List<Rectangle>> levellistrectangles = new Dictionary<int, List<Rectangle>>(); // int = level, rectangle = rectangle
         Dictionary<int, Color> playercolor = new Dictionary<int, Color>(); // int = playernr, color = color
         Dictionary<int, Rectangle> win = new Dictionary<int, Rectangle>(); // int = level rec = pos
-
+        Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>> moving = new Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>>(); // first int = levelnr, rectangle = startpos 2nd int = length units/frame vector2 = end pos
+        List<Vector2> start = new List<Vector2>();
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -67,6 +70,8 @@ namespace Spel_Projekt_Thor_Grimes
             startpos.Add(3, new Vector2(400, 400));
             startingpos.Add(1, startpos);
             List<Rectangle> l = new List<Rectangle>();
+            Dictionary<Rectangle, Dictionary<int, Vector2>> m = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
+            Dictionary<int, Vector2> t = new Dictionary<int, Vector2>();
             l.Add(new Rectangle(0, 0, 10, 430));
             l.Add(new Rectangle(0, 0, 500, 10));
             l.Add(new Rectangle(500, 0, 10, 440));
@@ -82,6 +87,10 @@ namespace Spel_Projekt_Thor_Grimes
             l.Add(new Rectangle(270, 0, 5, 50));
             levellistrectangles.Add(1, l);
             win[1] = new Rectangle(235, 0, 35, 50);
+            t[1] = new Vector2(200, 100);
+            m[new Rectangle(100, 200, 25, 25)] = t;
+            moving[1] = m;
+            start.Add(new Vector2(0, 50));
             base.Initialize();
         }
 
@@ -230,12 +239,7 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                     for (int j = 0; j < 4; j++) // || PLAYER ON PLAYER COLLISION
                     {
-                        Dictionary<int, int> pair = new Dictionary<int, int>();
                         if (i == j)
-                        {
-                            continue;
-                        }
-                        if (pair.ContainsKey(j) && pair.ContainsValue(i))
                         {
                             continue;
                         }
@@ -244,13 +248,16 @@ namespace Spel_Projekt_Thor_Grimes
                             if (playerax.Intersects(player[j]))
                             {
                                 velo[i].X *= -1;
+                                velo[j].X *= -1;
+                                continue;
                             }
-                            else if (playeray.Intersects(player[j]))
+                            if (playeray.Intersects(player[j]))
                             {
                                 velo[i].Y *= -1;
-                                pair.Add(i, j);
+                                velo[j].Y *= -1;
+                                continue;
                             }
-                            else
+                            if (!(playerax.Intersects(player[j])) &! playeray.Intersects(player[j]))
                             {
                                 velo[i] *= -1;
                             }
@@ -258,8 +265,35 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                     if (player[i].Contains(win[level]) || Keyboard.GetState().IsKeyDown(Keys.A))
                     {
-                        gamestate = 0;
+                        gamestate = 1;
                     }
+                }
+                for (int i = 0; i < moving[level].Count(); i++)
+                {
+                    var elements = moving[level].ElementAt(i);
+                    var intv2a = elements.Value;
+                    var intv2 = intv2a.ElementAt(0);
+
+                        Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>> temp = new Dictionary<int, Dictionary<Rectangle, Dictionary<int, Vector2>>>();
+                        Dictionary<Rectangle, Dictionary<int, Vector2>> temp2 = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
+                        Dictionary<int, Vector2> temp3 = new Dictionary<int, Vector2>();
+                        temp3[intv2.Key] = intv2.Value;
+                    Rectangle r;
+                    if (m)
+                    {
+                         r = new Rectangle(elements.Key.X + intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
+                    }
+                    else
+                    {
+                         r = new Rectangle(elements.Key.X - intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
+                    }
+                        temp2[r] = temp3;
+                        temp[level] = temp2;
+                        if (r.X > intv2.Value.X || r.X < start[level-1].X)
+                        {
+                            m = !m;
+                        }
+                        moving = temp;
                 }
             }
             void InitializeLevel()
@@ -291,6 +325,7 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                 }
             }
+
             base.Update(gameTime);
         }
 
@@ -325,6 +360,11 @@ namespace Spel_Projekt_Thor_Grimes
                 for (int i = 0; i < currec.Count(); i++)
                 {
                     spriteBatch.Draw(basic, currec[i], Color.White);
+                }
+                for (int i = 0; i < moving[level].Count(); i++)
+                {
+                    var elements = moving[level].ElementAt(i);
+                    spriteBatch.Draw(basic, elements.Key, Color.White);
                 }
             }
             foreach (var item in rectangles)
