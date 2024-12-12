@@ -68,6 +68,8 @@ namespace Spel_Projekt_Thor_Grimes
             LSText.Add("Back", new Vector2(55, 412));
             LSRectangle.Add(new Rectangle(25, 100, 100, 35));
             LSText.Add("Level 1", new Vector2(52, 112));
+            LSRectangle.Add(new Rectangle(75, 100, 100, 35));
+            LSText.Add("Level 1", new Vector2(52, 112));
             Dictionary<int, Vector2> startpos = new Dictionary<int, Vector2>();
             startpos.Add(0, new Vector2(100, 400));
             startpos.Add(1, new Vector2(200, 400));
@@ -96,6 +98,12 @@ namespace Spel_Projekt_Thor_Grimes
             m[new Rectangle(100, 200, 25, 25)] = t;
             moving[1] = m;
             start.Add(new Vector2(0, 50));
+            l.Clear();
+            l.Add(new Rectangle(0, 0, 10, 430));
+            l.Add(new Rectangle(0, 0, 500, 10));
+            l.Add(new Rectangle(500, 0, 10, 440));
+            l.Add(new Rectangle(0, 430, 500, 10));
+            levellistrectangles.Add(2, l);
             base.Initialize();
         }
 
