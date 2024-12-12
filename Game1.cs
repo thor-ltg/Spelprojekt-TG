@@ -25,12 +25,8 @@ namespace Spel_Projekt_Thor_Grimes
         SpriteFont Font;
         List<Rectangle> Walls = new List<Rectangle>();
         int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
-        bool debug = false;
-        bool rel = false;
         bool m = true;
-        Vector2 mousepos;
-        List<Rectangle> rectangles = new List<Rectangle>();
-        Rectangle rectangle;
+        int time = 0;
         MouseState mouse;
         MouseState oldmouse;
         Rectangle[] player = new Rectangle[4];
@@ -49,6 +45,8 @@ namespace Spel_Projekt_Thor_Grimes
         List<Vector2> start = new List<Vector2>();
         Vector2 pan;
         Dictionary<int, Dictionary<Rectangle, Rectangle>> portal = new Dictionary<int, Dictionary<Rectangle, Rectangle>>(); // int = levelnr, 1st rectangle = dest 1, 2nd = dest 2 (one way 1->2)
+        Dictionary<int, List<Rectangle>> trails = new Dictionary<int, List<Rectangle>>(); // int = playernr, list<rect> = trail pos and size
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -66,8 +64,18 @@ namespace Spel_Projekt_Thor_Grimes
             for (int i = 1; i <= 2; i++)
             {
                 List<Rectangle> empty = new List<Rectangle>();
-                empty.Add(new Rectangle(0, 0, 0, 0));
+                empty.Add(new Rectangle());
                 levellistrectangles.Add(i, empty);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                List<Rectangle> empty = new List<Rectangle>();
+                empty.Add(new Rectangle());
+                trails.Add(i, empty);
+                for (int j = 0; j < 15; j++)
+                {
+                    trails[i].Add(new Rectangle());
+                }
             }
             playercolor[0] = Color.Red;
             playercolor[1] = Color.Blue;
@@ -101,7 +109,7 @@ namespace Spel_Projekt_Thor_Grimes
             l.Add(new Rectangle(450, 300, 50, 5));
             l.Add(new Rectangle(215, 0, 5, 50));
             l.Add(new Rectangle(285, 0, 5, 50));
-            levellistrectangles[1] = l.ToArray().ToList();
+            levellistrectangles[1] = l.ToList();
             win[1] = new Rectangle(215, 0, 70, 50);
             t[1] = new Vector2(200, 100);
             m[new Rectangle(100, 200, 25, 25)] = t;
@@ -118,15 +126,25 @@ namespace Spel_Projekt_Thor_Grimes
             l.Add(new Rectangle(5, 325, 50, 5));
             l.Add(new Rectangle(5, 275, 50, 5));
             l.Add(new Rectangle(5, 225, 800, 5));
-            levellistrectangles[2] = l.ToArray().ToList();
+            l.Add(new Rectangle(750, 340, 50, 10));
+            l.Add(new Rectangle(750, 400, 50, 10));
+            l.Add(new Rectangle(740, 395, 10, 15));
+            l.Add(new Rectangle(740, 340, 10, 15));
+            l.Add(new Rectangle(590, 175, 10, 50));
+            l.Add(new Rectangle(650, 175, 10, 50));
+            l.Add(new Rectangle(645, 165, 15, 10));
+            l.Add(new Rectangle(590, 165, 15, 10));
+            l.Add(new Rectangle(355, 0, 10, 50));
+            l.Add(new Rectangle(435, 0, 10, 50));
+            levellistrectangles[2] = l.ToList();
             startpos.Add(0, new Vector2(25, 400));
             startpos.Add(1, new Vector2(25, 350));
             startpos.Add(2, new Vector2(25, 300));
             startpos.Add(3, new Vector2(25, 250));
             startingpos[2] = startpos.ToDictionary();
-            win[2] = new Rectangle(400, 0, 70, 50);
+            win[2] = new Rectangle(365, 0, 70, 50);
             Rectangle portal1 = new Rectangle(750, 350, 50, 50);
-            Rectangle portal2 = new Rectangle(400, 175, 50, 50);
+            Rectangle portal2 = new Rectangle(600, 175, 50, 50);
             portalpair[portal1] = portal2;
             portal[2] = portalpair;
             base.Initialize();
@@ -150,6 +168,7 @@ namespace Spel_Projekt_Thor_Grimes
                 Exit();
             oldmouse = mouse;
             mouse = Mouse.GetState();
+            time++;
             if (gamestate == 0)
             {
                 MMUpdate();
@@ -162,43 +181,6 @@ namespace Spel_Projekt_Thor_Grimes
             else if (gamestate == 2)
             {
                 GameUpdate();
-            }
-            if (debug) // debug mode allows you to create rectangles and get their information so it can be imported into the game
-            {
-                if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed)
-                {
-                    if (rel)
-                    {
-                        if (mouse.Position.X < mousepos.X)
-                        {
-                            if (mouse.Position.Y < mousepos.Y)
-                            {
-                                rectangle = new Rectangle(mouse.Position.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
-                            }
-                            else
-                            {
-                                rectangle = new Rectangle(mouse.Position.X, (int)mousepos.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
-                            }
-                        }
-                        else
-                        {
-                            if (mouse.Position.Y < mousepos.Y)
-                            {
-                                rectangle = new Rectangle((int)mousepos.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
-                            }
-                            else
-                            {
-                                rectangle = new Rectangle((int)mousepos.X, (int)mousepos.Y, (int)Math.Abs(mouse.Position.X - mousepos.X), (int)Math.Abs(mouse.Position.Y - mousepos.Y));
-                            }
-                        }
-                        rectangles.Add(rectangle);
-                    }
-                    else
-                    {
-                        mousepos = mouse.Position.ToVector2();
-                    }
-                    rel = !rel;
-                }
             }
             void MMUpdate()
             {
@@ -246,6 +228,20 @@ namespace Spel_Projekt_Thor_Grimes
             }
             void GameUpdate() // || GAME UPDATE METHOD
             {
+                for (int i = 0; i < 4; i++) // || TRAIL HANDLER
+                {
+                    for (int j = 0; j < 15; j++)
+                    {
+                        if (j == time % 15)
+                        {
+                            trails[i][j] = player[i];
+                        }
+                        else
+                        {
+                            trails[i][j] = new Rectangle(trails[i][j].X, trails[i][j].Y, trails[i][j].Width - 1, trails[i][j].Height - 1);
+                        }
+                    }
+                }
                 for (int i = 0; i < 4; i++) // || VELOCITY
                 {
                     player[i].X += (int)velo[i].X;
@@ -367,6 +363,19 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                         }
                     }
+                    if (portal.ContainsKey(level))
+                    {
+                        for (int j = 0; j < portal[level].Count(); j++)
+                        {
+                            Rectangle portal1 = portal[level].ElementAt(j).Key;
+                            Rectangle portal2 = portal[level].ElementAt(j).Value;
+                            if (portal1.Contains(player[i]))
+                            {
+                                player[i].X = portal2.X + portal2.Width / 2;
+                                player[i].Y = portal2.Y + portal2.Height / 2;
+                            }
+                        }
+                    }
                     if (win[level].Contains(player[i]))
                     {
                         gamestate = 1;
@@ -470,6 +479,11 @@ namespace Spel_Projekt_Thor_Grimes
                 {
                     Rectangle pplayer = new Rectangle((int)(player[i].X + pan.X), (int)(player[i].Y + pan.Y), player[i].Width, player[i].Height);
                     spriteBatch.Draw(basic, pplayer, playercolor[i]);
+                    for (int j = 0; j < 15; j++)
+                    {
+                        Rectangle ptrail = new Rectangle((int)(trails[i][j].X + pan.X), (int)(trails[i][j].Y + pan.Y), trails[i][j].Width, trails[i][j].Height);
+                        spriteBatch.Draw(basic, trails[i][j], playercolor[i]);
+                    }
                 }
                 List<Rectangle> currec = levellistrectangles[level];
                 for (int i = 0; i < currec.Count(); i++)
@@ -477,10 +491,6 @@ namespace Spel_Projekt_Thor_Grimes
                     Rectangle pcurrec = new Rectangle((int)(currec[i].X + pan.X), (int)(currec[i].Y + pan.Y), currec[i].Width, currec[i].Height);
                     spriteBatch.Draw(basic, pcurrec, Color.White);
                 }
-            }
-            foreach (var item in rectangles)
-            {
-                spriteBatch.Draw(basic, item, Color.White);
             }
             spriteBatch.End();
             base.Draw(gameTime);
