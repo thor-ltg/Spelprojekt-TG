@@ -10,6 +10,7 @@ using System.Threading;
 using Microsoft.Xna.Framework.Media;
 using Microsoft.Xna.Framework.Audio;
 using System.Reflection;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace Spel_Projekt_Thor_Grimes
@@ -25,7 +26,7 @@ namespace Spel_Projekt_Thor_Grimes
         SpriteFont Font;
         List<Rectangle> Walls = new List<Rectangle>();
         int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
-        bool m = true;
+        Dictionary<int, List<bool>> m = new Dictionary<int, List<bool>>(); 
         int time = 0;
         MouseState mouse;
         MouseState oldmouse;
@@ -46,6 +47,9 @@ namespace Spel_Projekt_Thor_Grimes
         Vector2 pan;
         Dictionary<int, Dictionary<Rectangle, Rectangle>> portal = new Dictionary<int, Dictionary<Rectangle, Rectangle>>(); // int = levelnr, 1st rectangle = dest 1, 2nd = dest 2 (one way 1->2)
         Dictionary<int, List<Rectangle>> trails = new Dictionary<int, List<Rectangle>>(); // int = playernr, list<rect> = trail pos and size
+        float zoom = 1;
+        bool[] dead = new bool[4];
+        bool[] winner = new bool[4];
 
         public Game1()
         {
@@ -112,6 +116,7 @@ namespace Spel_Projekt_Thor_Grimes
             levellistrectangles[1] = l.ToList();
             win[1] = new Rectangle(215, 0, 70, 50);
             t[1] = new Vector2(200, 100);
+            
             m[new Rectangle(100, 200, 25, 25)] = t;
             moving[1] = m;
             start.Add(new Vector2(0, 50)); // LEVEL 1 END
@@ -232,20 +237,32 @@ namespace Spel_Projekt_Thor_Grimes
                 {
                     for (int j = 0; j < 15; j++)
                     {
+                        Vector2 offset = new Vector2();
+                        if (velo[i].X == -1)
+                        {
+                            offset.X = 1;
+                        }
+                        if (velo[i].Y == -1)
+                        {
+                            offset.Y = 1;
+                        }
                         if (j == time % 15)
                         {
                             trails[i][j] = player[i];
                         }
                         else
                         {
-                            trails[i][j] = new Rectangle(trails[i][j].X, trails[i][j].Y, trails[i][j].Width - 1, trails[i][j].Height - 1);
+                            trails[i][j] = new Rectangle(trails[i][j].X + (int)offset.X, trails[i][j].Y + (int)offset.Y, trails[i][j].Width - 1, trails[i][j].Height - 1);
                         }
                     }
                 }
                 for (int i = 0; i < 4; i++) // || VELOCITY
                 {
-                    player[i].X += (int)velo[i].X;
-                    player[i].Y += (int)velo[i].Y;
+                    if (!dead[i] && !winner[i])
+                    {
+                        player[i].X += (int)velo[i].X;
+                        player[i].Y += (int)velo[i].Y;
+                    }
                 }
                 if (moving.ContainsKey(level))
                 {
@@ -260,7 +277,7 @@ namespace Spel_Projekt_Thor_Grimes
                         Dictionary<int, Vector2> temp3 = new Dictionary<int, Vector2>();
                         temp3[intv2.Key] = intv2.Value;
                         Rectangle r;
-                        if (m)
+                        if (m[level][i])
                         {
                             r = new Rectangle(elements.Key.X + intv2.Key, elements.Key.Y, elements.Key.Width, elements.Key.Height);
                         }
@@ -272,7 +289,7 @@ namespace Spel_Projekt_Thor_Grimes
                         temp[level] = temp2;
                         if (r.X > intv2.Value.X || r.X < start[level - 1].X)
                         {
-                            m = !m;
+                            m[level][i] = !m[level][i];
                         }
                         moving = temp;
                     }
@@ -301,6 +318,10 @@ namespace Spel_Projekt_Thor_Grimes
                                     velo[i] *= -1;
                                     hit.Play();
                                 }
+                            }
+                            if (elements.Key.Contains(player[i]))
+                            {
+                                dead[i] = true;
                             }
                         }
                     }
@@ -378,24 +399,50 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                     if (win[level].Contains(player[i]))
                     {
-                        gamestate = 1;
+                        winner[i] = true;
+                        for (int j = 0; j < 4; j++)
+                        {
+                            int stop = 0;
+                            if (winner[i] || dead[i])
+                            {
+                                stop++;
+                            }
+                            if (stop == 4)
+                            {
+                                gamestate = 1;
+                            }
+                        }
                     }
                 }
                 if (Keyboard.GetState().IsKeyDown(Keys.Up))
                 {
-                    pan.Y++;
+                    pan.Y += 10 * (1 / zoom);
                 }
                 if (Keyboard.GetState().IsKeyDown(Keys.Down))
                 {
-                    pan.Y--;
+                    pan.Y -= 10 * (1 / zoom);
                 }
                 if (Keyboard.GetState().IsKeyDown(Keys.Right))
                 {
-                    pan.X--;
+                    pan.X -= 10 * (1 / zoom);
                 }
                 if (Keyboard.GetState().IsKeyDown(Keys.Left))
                 {
-                    pan.X++;
+                    pan.X += 10 * (1 / zoom);
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.O) && zoom > 0.4)
+                {
+                    zoom /= 1.05f;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.I) && zoom < 10)
+                {
+                    zoom *= 1.05f;
+                }
+                if (Keyboard.GetState().IsKeyDown(Keys.R))
+                {
+                    pan.X = 0;
+                    pan.Y = 0;
+                    zoom = 1;
                 }
             }
             void InitializeLevel() // || INITALIZE LEVEL METHOD
@@ -427,7 +474,6 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                 }
             }
-
             base.Update(gameTime);
         }
 
@@ -453,17 +499,6 @@ namespace Spel_Projekt_Thor_Grimes
             }
             else if (gamestate == 2)
             {
-                Rectangle pwin = new Rectangle((int)(win[level].X + pan.X), (int)(win[level].Y+pan.Y), win[level].Width, win[level].Height);
-                spriteBatch.Draw(basic, pwin, Color.Gold);
-                if (moving.ContainsKey(level))
-                {
-                    for (int i = 0; i < moving[level].Count(); i++)
-                    {
-                        var elements = moving[level].ElementAt(i);
-                        Rectangle pmoving = new Rectangle((int)(elements.Key.X + pan.X), (int)(elements.Key.Y + pan.Y), elements.Key.Width, elements.Key.Height);
-                        spriteBatch.Draw(basic, pmoving, Color.White);
-                    }
-                }
                 if (portal.ContainsKey(level))
                 {
                     for (int i = 0; i < portal[level].Count(); i++)
@@ -471,24 +506,40 @@ namespace Spel_Projekt_Thor_Grimes
                         var elements = portal.ElementAt(i);
                         Rectangle portal1 = elements.Value.ElementAt(i).Key;
                         Rectangle portal2 = elements.Value.ElementAt(i).Value;
-                        spriteBatch.Draw(basic, new Rectangle((int)(portal1.X + pan.X), (int)(portal1.Y + pan.Y), portal1.Height, portal1.Width), Color.Firebrick);
-                        spriteBatch.Draw(basic, new Rectangle((int)(portal2.X + pan.X), (int)(portal2.Y + pan.Y), portal2.Height, portal2.Width), Color.PeachPuff);
+                        spriteBatch.Draw(basic, new Rectangle((int)((portal1.X + pan.X) * zoom), (int)((portal1.Y + pan.Y) * zoom), (int)(portal1.Height * zoom), (int)(portal1.Width * zoom)), Color.Firebrick);
+                        spriteBatch.Draw(basic, new Rectangle((int)((portal2.X + pan.X) * zoom), (int)((portal2.Y + pan.Y) * zoom), (int)(portal2.Height * zoom), (int)(portal2.Width * zoom)), Color.Firebrick);
                     }
                 }
                 for (int i = 0; i < 4; i++)
                 {
-                    Rectangle pplayer = new Rectangle((int)(player[i].X + pan.X), (int)(player[i].Y + pan.Y), player[i].Width, player[i].Height);
-                    spriteBatch.Draw(basic, pplayer, playercolor[i]);
-                    for (int j = 0; j < 15; j++)
+                    Rectangle pplayer = new Rectangle((int)((player[i].X + pan.X) * zoom), (int)((player[i].Y + pan.Y) * zoom), (int)(player[i].Width * zoom), (int)(player[i].Height * zoom));
+                    if (!dead[i])
                     {
-                        Rectangle ptrail = new Rectangle((int)(trails[i][j].X + pan.X), (int)(trails[i][j].Y + pan.Y), trails[i][j].Width, trails[i][j].Height);
-                        spriteBatch.Draw(basic, ptrail, playercolor[i]);
+                        spriteBatch.Draw(basic, pplayer, playercolor[i]);
+                        for (int j = 0; j < 15; j++)
+                        {
+                            int w = 15;
+                            Rectangle ptrail = new Rectangle((int)((trails[i][j].X + pan.X) * zoom), (int)((trails[i][j].Y + pan.Y) * zoom), (int)(trails[i][j].Width * zoom), (int)((trails[i][j].Height) * zoom));
+                            spriteBatch.Draw(basic, ptrail, playercolor[i] * (0.01F * w));
+                            w--;
+                        }
+                    }
+                }
+                Rectangle pwin = new Rectangle((int)((win[level].X + pan.X)*zoom), (int)((win[level].Y+pan.Y)*zoom), (int)(win[level].Width*zoom), (int)(win[level].Height*zoom));
+                spriteBatch.Draw(basic, pwin, Color.Gold);
+                if (moving.ContainsKey(level))
+                {
+                    for (int i = 0; i < moving[level].Count(); i++)
+                    {
+                        var elements = moving[level].ElementAt(i);
+                        Rectangle pmoving = new Rectangle((int)((elements.Key.X + pan.X)*zoom), (int)((elements.Key.Y + pan.Y)*zoom), (int)(elements.Key.Width*zoom), (int)(elements.Key.Height*zoom));
+                        spriteBatch.Draw(basic, pmoving, Color.White);
                     }
                 }
                 List<Rectangle> currec = levellistrectangles[level];
                 for (int i = 0; i < currec.Count(); i++)
                 {
-                    Rectangle pcurrec = new Rectangle((int)(currec[i].X + pan.X), (int)(currec[i].Y + pan.Y), currec[i].Width, currec[i].Height);
+                    Rectangle pcurrec = new Rectangle((int)((currec[i].X + pan.X)*zoom), (int)((currec[i].Y + pan.Y)*zoom), (int)(currec[i].Width*zoom), (int)((currec[i].Height)*zoom));
                     spriteBatch.Draw(basic, pcurrec, Color.White);
                 }
             }
