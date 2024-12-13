@@ -482,7 +482,7 @@ namespace Spel_Projekt_Thor_Grimes
                     for (int j = 0; j < 15; j++)
                     {
                         Rectangle ptrail = new Rectangle((int)(trails[i][j].X + pan.X), (int)(trails[i][j].Y + pan.Y), trails[i][j].Width, trails[i][j].Height);
-                        spriteBatch.Draw(basic, trails[i][j], playercolor[i]);
+                        spriteBatch.Draw(basic, ptrail, playercolor[i]);
                     }
                 }
                 List<Rectangle> currec = levellistrectangles[level];
