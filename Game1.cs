@@ -1,16 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Threading;
-using Microsoft.Xna.Framework.Media;
-using Microsoft.Xna.Framework.Audio;
-using System.Reflection;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
 
 
 namespace Spel_Projekt_Thor_Grimes
@@ -25,15 +21,15 @@ namespace Spel_Projekt_Thor_Grimes
         SpriteFont MMFont;
         SpriteFont Font;
         List<Rectangle> Walls = new List<Rectangle>();
-        int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator (if i have time)
-        Dictionary<int, List<bool>> m = new Dictionary<int, List<bool>>(); 
+        int gamestate = 0; // 0 = main menu, 1 = level selector, 2 = in game, 3 = level creator 
+        Dictionary<int, List<bool>> m = new Dictionary<int, List<bool>>();
         int time = 0;
         MouseState mouse;
         MouseState oldmouse;
         Vector2 oldmousepos;
         Rectangle[] player = new Rectangle[4];
         Vector2[] velo = new Vector2[4];
-        float globalhoverdarken = 1; // global used for sprites, local used for rectanglesA
+        float globalhoverdarken = 1; // global used for sprites, local used for rectangles
         List<float> localhoverdarken = new List<float>();
         List<Rectangle> LSRectangle = new List<Rectangle>();
         Dictionary<string, Vector2> LSText = new Dictionary<string, Vector2>();
@@ -50,21 +46,31 @@ namespace Spel_Projekt_Thor_Grimes
         Dictionary<int, List<Rectangle>> trails = new Dictionary<int, List<Rectangle>>(); // int = playernr, list<rect> = trail pos and size
         float zoom = 1;
         bool[] dead = new bool[4];
-        bool[] winner = new bool[4];
+        bool portal1;
         Rectangle LCSwall = new Rectangle(100, 420, 25, 25); // LCS = level creator select
         Rectangle LCSredspawn = new Rectangle(150, 420, 25, 25);
         Rectangle LCSbluespawn = new Rectangle(200, 420, 25, 25);
         Rectangle LCSyellowspawn = new Rectangle(250, 420, 25, 25);
         Rectangle LCSgreenspawn = new Rectangle(300, 420, 25, 25);
+        Rectangle LCSwin = new Rectangle(350, 420, 25, 25);
+        Rectangle LCSportal = new Rectangle(400, 420, 25, 25);
+        Rectangle savebutton = new Rectangle(750, 420, 25, 25);
+        Rectangle exitbutton = new Rectangle(700, 420, 25, 25);
+        bool s;
         bool selectw;
         bool selectr;
         bool selectb;
         bool selecty;
         bool selectg;
+        bool selectwin;
+        bool selectp;
         bool clicked;
+        Rectangle holder = Rectangle.Empty;
         List<Rectangle> LCSwallspos = new List<Rectangle>();
+        Dictionary<Rectangle, Rectangle> LCSportals = new Dictionary<Rectangle, Rectangle>();
         Rectangle LCSwallghost;
         Vector2[] playerspawn = new Vector2[4];
+        Rectangle wincreate = new Rectangle();
 
         public Game1()
         {
@@ -76,7 +82,8 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Initialize()
         {
-            for (int i = 0; i < 4; i++)
+            Rectangle holder;
+            for (int i = 0; i < 5; i++)
             {
                 localhoverdarken.Add(1);
             }
@@ -100,6 +107,10 @@ namespace Spel_Projekt_Thor_Grimes
             playercolor[1] = Color.Blue;
             playercolor[2] = Color.Yellow;
             playercolor[3] = Color.Green;
+            for (int i = 0; i < 4; i++)
+            {
+                playerspawn[i] = new Vector2(200000, 200000);
+            }
             List<bool> boollist = new List<bool>();
             LSRectangle.Add(new Rectangle(25, 400, 90, 35)); // LEVEL SELECT START
             LSText.Add("Back", new Vector2(55, 412));
@@ -107,6 +118,8 @@ namespace Spel_Projekt_Thor_Grimes
             LSText.Add("Level 1", new Vector2(52, 112));
             LSRectangle.Add(new Rectangle(175, 100, 100, 35));
             LSText.Add("Level 2", new Vector2(202, 112));
+            LSRectangle.Add(new Rectangle(325, 100, 100, 35));
+            LSText.Add("Save", new Vector2(360, 112));
             LSRectangle.Add(new Rectangle(175, 400, 100, 35));
             LSText.Add("Lev. Creator", new Vector2(180, 412)); // LEVEL SELECT END
             Dictionary<int, Vector2> startpos = new Dictionary<int, Vector2>();
@@ -173,7 +186,274 @@ namespace Spel_Projekt_Thor_Grimes
             portalpair[portal1] = portal2;
             portal[2] = portalpair;
             l.Clear();
+            portalpair.Clear();
+            startpos.Clear();
             boollist.Clear(); // LEVEL 2 END
+            using (StreamReader sr = File.OpenText("C:\\gitmapp\\Spelprojekt-TG\\SaveData.txt")) // BYT TILL VART *DU* HAR MAPPEN !!!
+            {
+                string s = sr.ReadLine();
+                string[] data = s.Split("ÖÄ");
+                string[] walls = data[0].Split("Ö");
+                string[] spawns = data[1].Split('Ö');
+                string[] portals = data[2].Split('Ö');
+                Rectangle rectangle = Rectangle.Empty;
+                Rectangle portals1 = Rectangle.Empty;
+                Rectangle portals2 = Rectangle.Empty;
+                Vector2 vector2 = new Vector2(0,0);
+                for (int i = 0; i < walls.Length; i++)
+                {
+                    bool nx = false;
+                    bool ny = false;
+                    bool nw = false;
+                    bool nh = false;
+                    string currentwall = walls[i];
+                    for (int j = 0; j < currentwall.Length; j++)
+                    {
+                        int integer;
+                        int all = 0;
+                        if (currentwall[j] == 'X')
+                        {
+                            nx = true;
+                        }
+                        if (currentwall[j] == 'Y')
+                        {
+                            ny = true;
+                        }
+                        if (currentwall[j] == 'W')
+                        {
+                            nw = true;
+                        }
+                        if (currentwall[j] == 'G')
+                        {
+                            nh = true;
+                        }
+                        if (int.TryParse(currentwall[j].ToString(), out integer))
+                        {
+                            all = integer;
+                            while (int.TryParse(currentwall[j+1].ToString(), out integer))
+                            {
+                                all = all * 10 + integer;
+                                j++;
+                            }
+                            if (nx)
+                            {
+                                rectangle.X = all;
+                                nx = false;
+                            }
+                            else if (ny)
+                            {
+                                rectangle.Y = all;
+                                ny = false;
+                            }
+                            else if (nw)
+                            {
+                                rectangle.Width = all;
+                                nw = false;
+                            }
+                            else if (nh)
+                            {
+                                rectangle.Height = all;
+                                nh = false;
+                            }
+
+                        }
+                    }
+                    l.Add(rectangle);
+                }
+                for (int i = 0; i < spawns.Length; i++)
+                {
+                    bool nx = false;
+                    bool ny = false;
+                    string currentspawn = spawns[i];
+                    for (int j = 0; j < currentspawn.Length; j++)
+                    {
+                        int integer = 1;
+                        int all = 0;
+                        if (currentspawn[j] == 'X')
+                        {
+                            nx = true;
+                        }
+                        if (currentspawn[j] == 'Y')
+                        {
+                            ny = true;
+                        }
+                        if (int.TryParse(currentspawn[j].ToString(), out integer))
+                        {
+                            all = integer;
+                            while (int.TryParse(currentspawn[j+1].ToString(), out integer))
+                            {
+                                all = all * 10 + integer;
+                                j++;
+                            }
+                            if (nx)
+                            {
+                                vector2.X = all;
+                                nx = false;
+                                all = 0;
+                            }
+                            else if (ny)
+                            {
+                                vector2.Y = all;
+                                ny = false;
+                                all = 0;
+                            }
+                        }
+                    }
+                    startpos.Add(i, new Vector2(vector2.X, vector2.Y));
+                }
+                string win = data[3];
+                for (int i = 0; i < win.Length; i++)
+                {
+                    bool nx = false;
+                    bool ny = false;
+                    bool nw = false;
+                    bool nh = false;
+                    int integer;
+                    int all = 0;
+                    if (win[i] == 'X')
+                    {
+                        nx = true;
+                    }
+                    if (win[i] == 'Y')
+                    {
+                        ny = true;
+                    }
+                    if (win[i] == 'W')
+                    {
+                        nw = true;
+                    }
+                    if (win[i] == 'G')
+                    {
+                        nh = true;
+                    }
+                    if (int.TryParse(win[i].ToString(), out integer))
+                    {
+                        all = integer;
+                        while (int.TryParse(win[i+1].ToString(), out integer))
+                        {
+                            all = all * 10 + integer;
+                            i++;
+                        }
+                        if (nx)
+                        {
+                            rectangle.X = all;
+                            nx = false;
+                        }
+                        else if (ny)
+                        {
+                            rectangle.Y = all;
+                            ny = false;
+                        }
+                        else if (nw)
+                        {
+                            rectangle.Width = all;
+                            nw = false;
+                        }
+                        else if (nh)
+                        {
+                            rectangle.Height = all;
+                            nh = false;
+                        }
+                    }
+                }
+                holder = rectangle;
+                for (int i = 0; i < portals.Length; i++)
+                {
+                    bool nx = false;
+                    bool ny = false;
+                    bool nw = false;
+                    bool nh = false;
+                    string currentportal = portals[i];
+                    for (int j = 0; j < currentportal.Length; j++)
+                    {
+                        int integer;
+                        int all = 0;
+                        if (currentportal[j] == 'X')
+                        {
+                            nx = true;
+                        }
+                        if (currentportal[j] == 'Y')
+                        {
+                            ny = true;
+                        }
+                        if (currentportal[j] == 'W')
+                        {
+                            nw = true;
+                        }
+                        if (currentportal[j] == 'G')
+                        {
+                            nh = true;
+                        }
+                        if (int.TryParse(currentportal[j].ToString(), out integer))
+                        {
+                            all = integer;
+                            while (int.TryParse(currentportal[j + 1].ToString(), out integer))
+                            {
+                                all = all * 10 + integer;
+                                j++;
+                            }
+                            if (nx)
+                            {
+                                if (i % 2 != 0)
+                                {
+                                    portal1.X = all;
+                                }
+                                else
+                                {
+                                    portal2.X = all;
+                                }
+                                nx = false;
+                            }
+                            else if (ny)
+                            {
+                                if (i % 2 != 0)
+                                {
+                                    portal1.Y = all;
+                                }
+                                else
+                                {
+                                    portal2.Y = all;
+                                }
+                                ny = false;
+                            }
+                            else if (nw)
+                            {
+                                if (i % 2 != 0)
+                                {
+                                    portal1.Width = all;
+                                }
+                                else
+                                {
+                                    portal2.Width = all;
+                                }
+                                nw = false;
+                            }
+                            else if (nh)
+                            {
+                                if (i % 2 != 0)
+                                {
+                                    portal1.Height = all;
+                                }
+                                else
+                                {
+                                    portal2.Height = all;
+                                }
+                                nh = false;
+                            }
+                            if (i != 0 && i % 2 == 0)
+                            {
+                                portal1 = portals1;
+                                portal2 = portals2;
+                            }
+                        }
+                    }
+                }
+            }
+            portalpair[portal1] = portal2;
+            portal[3] = portalpair;
+            levellistrectangles[3] = l.ToList();
+            startingpos[3] = startpos.ToDictionary();
+            win[3] = holder;
             base.Initialize();
         }
 
@@ -204,7 +484,6 @@ namespace Spel_Projekt_Thor_Grimes
             {
                 LevelSelectorUpdate();
             }
-
             else if (gamestate == 2)
             {
                 GameUpdate();
@@ -235,7 +514,7 @@ namespace Spel_Projekt_Thor_Grimes
                     if (LSRectangle[i].Contains(mouse.Position))
                     {
                         localhoverdarken[i] = 0.8f;
-                        if (mouse.LeftButton == ButtonState.Pressed )
+                        if (mouse.LeftButton == ButtonState.Pressed)
                         {
                             var text = LSText.ElementAt(i).Key;
                             if (text.Contains("Back"))
@@ -252,6 +531,12 @@ namespace Spel_Projekt_Thor_Grimes
                             else if (text.Contains("Lev. Creator"))
                             {
                                 gamestate = 3;
+                            }
+                            else if (text.Contains("Save"))
+                            {
+                                level = 3;
+                                InitializeLevel();
+                                gamestate++;
                             }
                         }
                     }
@@ -288,7 +573,7 @@ namespace Spel_Projekt_Thor_Grimes
                 }
                 for (int i = 0; i < 4; i++) // || VELOCITY
                 {
-                    if (!dead[i] && !winner[i])
+                    if (!dead[i])
                     {
                         player[i].X += (int)velo[i].X;
                         player[i].Y += (int)velo[i].Y;
@@ -407,7 +692,7 @@ namespace Spel_Projekt_Thor_Grimes
                                 hit.Play();
                                 continue;
                             }
-                            if (!(playerax.Intersects(player2av)) &! playeray.Intersects(player2av))
+                            if (!(playerax.Intersects(player2av)) & !playeray.Intersects(player2av))
                             {
                                 velo[i] *= -1;
                                 hit.Play();
@@ -429,19 +714,7 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                     if (win[level].Contains(player[i]))
                     {
-                        winner[i] = true;
-                        for (int j = 0; j < 4; j++)
-                        {
-                            int stop = 0;
-                            if (winner[i] || dead[i])
-                            {
-                                stop++;
-                            }
-                            if (stop == 4)
-                            {
-                                gamestate = 1;
-                            }
-                        }
+                        gamestate--;
                     }
                 }
                 if (Keyboard.GetState().IsKeyDown(Keys.Up))
@@ -477,7 +750,7 @@ namespace Spel_Projekt_Thor_Grimes
             }
             void InitializeLevel() // || INITALIZE LEVEL METHOD
             {
-                for (int i = 0; i < startingpos[level].Count(); i++) 
+                for (int i = 0; i < startingpos[level].Count(); i++)
                 {
                     var pos = startingpos[level].ElementAt(i).Value;
                     Rectangle playerrec = new Rectangle((int)pos.X, (int)pos.Y, 15, 15);
@@ -508,38 +781,272 @@ namespace Spel_Projekt_Thor_Grimes
             {
                 if (LCSwall.Contains(mouse.Position))
                 {
-                    if (mouse.LeftButton == ButtonState.Pressed)
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
                     {
                         selectw = true;
-                        time = 0;
+                        s = true;
+                    }
+                }
+                if (LCSredspawn.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selectr = true;
+                        s = true;
+                    }
+                }
+                if (LCSbluespawn.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selectb = true;
+                        s = true;
+                    }
+                }
+                if (LCSyellowspawn.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selecty = true;
+                        s = true;
+                    }
+                }
+                if (LCSgreenspawn.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selectg = true;
+                        s = true;
+                    }
+                }
+                if (LCSwin.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selectwin = true;
+                        s = true;
+                    }
+                }
+                if (LCSportal.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        selectp = true;
+                        s = true;
+                    }
+                }
+                if (exitbutton.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && !s)
+                    {
+                        gamestate = 1;
+                    }
+                }
+                if (savebutton.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed)
+                    {
+
+                        string docPath = "C:\\gitmapp\\Spelprojekt-TG"; // BYT TILL VART *DU* HAR MAPPEN !!!
+
+                        using (StreamWriter outputFile = new StreamWriter(Path.Combine(docPath, "SaveData.txt")))
+                        {
+                            foreach (var item in LCSwallspos)
+                            {
+                                outputFile.Write(item + "Ö");
+                            }
+                            outputFile.Write("Ä");
+                            outputFile.Write(playerspawn[0]);
+                            outputFile.Write("Ö");
+                            outputFile.Write(playerspawn[1]);
+                            outputFile.Write("Ö");
+                            outputFile.Write(playerspawn[2]);
+                            outputFile.Write("Ö");
+                            outputFile.Write(playerspawn[3]);
+                            outputFile.Write("ÖÄ");
+                            outputFile.Write(wincreate);
+                            outputFile.Write("ÖÄ");
+                            foreach (var item in LCSportals)
+                            {
+                                outputFile.Write(item + "Ö");
+                            }
+                        }
+                        Exit();
                     }
                 }
                 if (selectw)
                 {
                     if (clicked)
                     {
-                        if (oldmousepos.X > mouse.X)
+                        if (mouse.Position.X < oldmousepos.X)
                         {
-                            LCSwallghost.X = (int)oldmousepos.X;
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
                         }
                         else
                         {
-                            LCSwallghost.X = mouse.X;
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
                         }
-                        if (oldmouse.Y > mouse.Y)
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed)
                         {
-                            LCSwallghost.Y = (int)oldmousepos.Y;
+                            LCSwallspos.Add(LCSwallghost);
+                            selectw = false;
+                            clicked = false;
+                            s = false;
                         }
-                        else
-                        {
-                            LCSwallghost.Y = mouse.Y;
-                        }
-                        LCSwallghost.Width = Math.Abs((int)oldmousepos.X - mouse.X);
-                        LCSwallghost.Height = Math.Abs((int)oldmousepos.Y - mouse.Y);
                     }
                     else
                     {
-                        if (mouse.LeftButton == ButtonState.Pressed && oldmouse.LeftButton == ButtonState.Released && time != 0)
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                        {
+                            LCSwallghost.X = mouse.X;
+                            LCSwallghost.Y = mouse.Y;
+                            oldmousepos.X = mouse.X;
+                            oldmousepos.Y = mouse.Y;
+                            clicked = true;
+                        }
+                    }
+                }
+                if (selectr)
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                    {
+                        playerspawn[0] = mouse.Position.ToVector2();
+                        selectr = false;
+                        s = false;
+                    }
+                }
+                if (selectb)
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                    {
+                        playerspawn[1] = mouse.Position.ToVector2();
+                        selectb = false;
+                        s = false;
+                    }
+                }
+                if (selecty)
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                    {
+                        playerspawn[2] = mouse.Position.ToVector2();
+                        selecty = false;
+                        s = false;
+                    }
+                }
+                if (selectg)
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                    {
+                        playerspawn[3] = mouse.Position.ToVector2();
+                        selectg = false;
+                        s = false;
+                    }
+                }
+                if (selectwin)
+                {
+                    if (clicked)
+                    {
+                        if (mouse.Position.X < oldmousepos.X)
+                        {
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                        }
+                        else
+                        {
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                        }
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed)
+                        {
+                            wincreate = LCSwallghost;
+                            selectwin = false;
+                            clicked = false;
+                            s = false;
+                        }
+                    }
+                    else
+                    {
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
+                        {
+                            LCSwallghost.X = mouse.X;
+                            LCSwallghost.Y = mouse.Y;
+                            oldmousepos.X = mouse.X;
+                            oldmousepos.Y = mouse.Y;
+                            clicked = true;
+                        }
+                    }
+                }
+                if (selectp)
+                {
+                    if (clicked)
+                    {
+                        if (mouse.Position.X < oldmousepos.X)
+                        {
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle(mouse.Position.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                        }
+                        else
+                        {
+                            if (mouse.Position.Y < oldmousepos.Y)
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, mouse.Position.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                            else
+                            {
+                                LCSwallghost = new Rectangle((int)oldmousepos.X, (int)oldmousepos.Y, (int)Math.Abs(mouse.Position.X - oldmousepos.X), (int)Math.Abs(mouse.Position.Y - oldmousepos.Y));
+                            }
+                        }
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed && portal1 == false)
+                        {
+                            clicked = false;
+                            portal1 = true;
+                            holder = LCSwallghost;
+                            LCSwallghost.X = 50000;
+                        }
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed && portal1 == true && clicked == true)
+                        {
+                            portal1 = false;
+                            s = false;
+                            selectp = false;
+                            clicked = false;
+                            LCSportals.Add(holder, LCSwallghost);
+                        }
+                    }
+                    else
+                    {
+                        if (mouse.LeftButton == ButtonState.Released && oldmouse.LeftButton == ButtonState.Pressed && mouse.Position.Y < 400)
                         {
                             LCSwallghost.X = mouse.X;
                             LCSwallghost.Y = mouse.Y;
@@ -555,12 +1062,12 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.DarkBlue*0.5F);
+            GraphicsDevice.Clear(Color.DarkBlue * 0.5F);
 
             spriteBatch.Begin();
             if (gamestate == 0)
             {
-                spriteBatch.DrawString(MMFont, "Placeholder", new Vector2(330, 95), Color.White);
+                spriteBatch.DrawString(MMFont, "Bouncy Cubes", new Vector2(330, 95), Color.White);
                 spriteBatch.Draw(Button, new Vector2(300, 200), Color.White * globalhoverdarken);
                 spriteBatch.DrawString(MMFont, "PLAY!", new Vector2(370, 220), Color.DeepSkyBlue * globalhoverdarken);
             }
@@ -582,7 +1089,7 @@ namespace Spel_Projekt_Thor_Grimes
                         var elements = portal.ElementAt(i);
                         Rectangle portal1 = elements.Value.ElementAt(i).Key;
                         Rectangle portal2 = elements.Value.ElementAt(i).Value;
-                        spriteBatch.Draw(basic, new Rectangle((int)((portal1.X + pan.X) * zoom), (int)((portal1.Y + pan.Y) * zoom), (int)(portal1.Height * zoom), (int)(portal1.Width * zoom)), Color.Firebrick);
+                        spriteBatch.Draw(basic, new Rectangle((int)((portal1.X + pan.X) * zoom), (int)((portal1.Y + pan.Y) * zoom), (int)(portal1.Height * zoom), (int)(portal1.Width * zoom)), Color.PeachPuff);
                         spriteBatch.Draw(basic, new Rectangle((int)((portal2.X + pan.X) * zoom), (int)((portal2.Y + pan.Y) * zoom), (int)(portal2.Height * zoom), (int)(portal2.Width * zoom)), Color.Firebrick);
                     }
                 }
@@ -601,33 +1108,70 @@ namespace Spel_Projekt_Thor_Grimes
                         }
                     }
                 }
-                Rectangle pwin = new Rectangle((int)((win[level].X + pan.X)*zoom), (int)((win[level].Y+pan.Y)*zoom), (int)(win[level].Width*zoom), (int)(win[level].Height*zoom));
+                Rectangle pwin = new Rectangle((int)((win[level].X + pan.X) * zoom), (int)((win[level].Y + pan.Y) * zoom), (int)(win[level].Width * zoom), (int)(win[level].Height * zoom));
                 spriteBatch.Draw(basic, pwin, Color.Gold);
                 if (moving.ContainsKey(level))
                 {
                     for (int i = 0; i < moving[level].Count(); i++)
                     {
                         var elements = moving[level].ElementAt(i);
-                        Rectangle pmoving = new Rectangle((int)((elements.Key.X + pan.X)*zoom), (int)((elements.Key.Y + pan.Y)*zoom), (int)(elements.Key.Width*zoom), (int)(elements.Key.Height*zoom));
+                        Rectangle pmoving = new Rectangle((int)((elements.Key.X + pan.X) * zoom), (int)((elements.Key.Y + pan.Y) * zoom), (int)(elements.Key.Width * zoom), (int)(elements.Key.Height * zoom));
                         spriteBatch.Draw(basic, pmoving, Color.White);
                     }
                 }
                 List<Rectangle> currec = levellistrectangles[level];
                 for (int i = 0; i < currec.Count(); i++)
                 {
-                    Rectangle pcurrec = new Rectangle((int)((currec[i].X + pan.X)*zoom), (int)((currec[i].Y + pan.Y)*zoom), (int)(currec[i].Width*zoom), (int)((currec[i].Height)*zoom));
+                    Rectangle pcurrec = new Rectangle((int)((currec[i].X + pan.X) * zoom), (int)((currec[i].Y + pan.Y) * zoom), (int)(currec[i].Width * zoom), (int)((currec[i].Height) * zoom));
                     spriteBatch.Draw(basic, pcurrec, Color.White);
                 }
             }
             else if (gamestate == 3)
             {
+                if (selectwin)
+                {
+                    spriteBatch.Draw(basic, LCSwallghost, Color.Gold);
+                }
+                else if (selectp && portal1)
+                {
+                    spriteBatch.Draw(basic, LCSwallghost, Color.Firebrick);
+                }
+                else if (selectp && !portal1)
+                {
+                    spriteBatch.Draw(basic, LCSwallghost, Color.PeachPuff);
+                }
+                else
+                {
+                    spriteBatch.Draw(basic, LCSwallghost, Color.White);
+                }
+                spriteBatch.Draw(basic, holder, Color.PeachPuff);
+                spriteBatch.Draw(basic, wincreate, Color.Gold);
+                foreach (var item in LCSwallspos)
+                {
+                    spriteBatch.Draw(basic, item, Color.White);
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    spriteBatch.Draw(basic, new Rectangle((int)playerspawn[i].X - 5, (int)playerspawn[i].Y - 5, 10, 10), playercolor[i]);
+                }
+                for (int i = 0; i < LCSportals.Count(); i++)
+                {
+                    var elements = LCSportals.ElementAt(i);
+                    spriteBatch.Draw(basic, elements.Key, Color.PeachPuff);
+                    spriteBatch.Draw(basic, elements.Value, Color.Firebrick);
+                }
                 spriteBatch.Draw(basic, new Rectangle(0, 400, 800, 80), Color.DarkGray);
                 spriteBatch.Draw(basic, LCSwall, Color.White);
                 spriteBatch.Draw(basic, LCSredspawn, Color.Red);
                 spriteBatch.Draw(basic, LCSbluespawn, Color.Blue);
                 spriteBatch.Draw(basic, LCSyellowspawn, Color.Yellow);
                 spriteBatch.Draw(basic, LCSgreenspawn, Color.Green);
-                spriteBatch.Draw(basic, LCSwallghost, Color.White);
+                spriteBatch.Draw(basic, LCSwin, Color.Gold);
+                spriteBatch.Draw(basic, LCSportal, Color.Purple);
+                spriteBatch.Draw(basic, savebutton, Color.White);
+                spriteBatch.Draw(basic, exitbutton, Color.Red);
+                spriteBatch.DrawString(Font, "S", new Vector2(savebutton.X + 10, savebutton.Y + savebutton.Height / 4), Color.Black);
+                spriteBatch.DrawString(Font, "E", new Vector2(exitbutton.X + 10, exitbutton.Y + exitbutton.Height / 4), Color.Black);
             }
             spriteBatch.End();
             base.Draw(gameTime);

@@ -1,0 +1,1 @@
+{X:6 Y:1 Width:791 Height:19}Ö{X:6 Y:2 Width:12 Height:395}Ö{X:7 Y:380 Width:791 Height:13}Ö{X:374 Y:19 Width:35 Height:364}ÖÄ{X:49 Y:62}Ö{X:44 Y:149}Ö{X:49 Y:220}Ö{X:53 Y:283}ÖÄ{X:772 Y:18 Width:23 Height:365}ÖÄ[{X:295 Y:318 Width:80 Height:62}, {X:411 Y:25 Width:73 Height:57}]Ö
