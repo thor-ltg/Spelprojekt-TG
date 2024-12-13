@@ -30,9 +30,10 @@ namespace Spel_Projekt_Thor_Grimes
         int time = 0;
         MouseState mouse;
         MouseState oldmouse;
+        Vector2 oldmousepos;
         Rectangle[] player = new Rectangle[4];
         Vector2[] velo = new Vector2[4];
-        float globalhoverdarken = 1; // global used for sprites, local used for rectangles
+        float globalhoverdarken = 1; // global used for sprites, local used for rectanglesA
         List<float> localhoverdarken = new List<float>();
         List<Rectangle> LSRectangle = new List<Rectangle>();
         Dictionary<string, Vector2> LSText = new Dictionary<string, Vector2>();
@@ -50,6 +51,20 @@ namespace Spel_Projekt_Thor_Grimes
         float zoom = 1;
         bool[] dead = new bool[4];
         bool[] winner = new bool[4];
+        Rectangle LCSwall = new Rectangle(100, 420, 25, 25); // LCS = level creator select
+        Rectangle LCSredspawn = new Rectangle(150, 420, 25, 25);
+        Rectangle LCSbluespawn = new Rectangle(200, 420, 25, 25);
+        Rectangle LCSyellowspawn = new Rectangle(250, 420, 25, 25);
+        Rectangle LCSgreenspawn = new Rectangle(300, 420, 25, 25);
+        bool selectw;
+        bool selectr;
+        bool selectb;
+        bool selecty;
+        bool selectg;
+        bool clicked;
+        List<Rectangle> LCSwallspos = new List<Rectangle>();
+        Rectangle LCSwallghost;
+        Vector2[] playerspawn = new Vector2[4];
 
         public Game1()
         {
@@ -61,7 +76,7 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Initialize()
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 localhoverdarken.Add(1);
             }
@@ -85,12 +100,15 @@ namespace Spel_Projekt_Thor_Grimes
             playercolor[1] = Color.Blue;
             playercolor[2] = Color.Yellow;
             playercolor[3] = Color.Green;
+            List<bool> boollist = new List<bool>();
             LSRectangle.Add(new Rectangle(25, 400, 90, 35)); // LEVEL SELECT START
             LSText.Add("Back", new Vector2(55, 412));
             LSRectangle.Add(new Rectangle(25, 100, 100, 35));
             LSText.Add("Level 1", new Vector2(52, 112));
             LSRectangle.Add(new Rectangle(175, 100, 100, 35));
-            LSText.Add("Level 2", new Vector2(202, 112)); // LEVEL SELECT END
+            LSText.Add("Level 2", new Vector2(202, 112));
+            LSRectangle.Add(new Rectangle(175, 400, 100, 35));
+            LSText.Add("Lev. Creator", new Vector2(180, 412)); // LEVEL SELECT END
             Dictionary<int, Vector2> startpos = new Dictionary<int, Vector2>();
             Dictionary<Rectangle, Rectangle> portalpair = new Dictionary<Rectangle, Rectangle>();
             startpos.Add(0, new Vector2(100, 400)); // LEVEL 1 START
@@ -98,7 +116,7 @@ namespace Spel_Projekt_Thor_Grimes
             startpos.Add(2, new Vector2(300, 400));
             startpos.Add(3, new Vector2(400, 400));
             startingpos.Add(1, startpos.ToDictionary());
-            Dictionary<Rectangle, Dictionary<int, Vector2>> m = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
+            Dictionary<Rectangle, Dictionary<int, Vector2>> mo = new Dictionary<Rectangle, Dictionary<int, Vector2>>();
             Dictionary<int, Vector2> t = new Dictionary<int, Vector2>();
             l.Add(new Rectangle(0, 0, 10, 430));
             l.Add(new Rectangle(0, 0, 500, 10));
@@ -116,9 +134,11 @@ namespace Spel_Projekt_Thor_Grimes
             levellistrectangles[1] = l.ToList();
             win[1] = new Rectangle(215, 0, 70, 50);
             t[1] = new Vector2(200, 100);
-            
-            m[new Rectangle(100, 200, 25, 25)] = t;
-            moving[1] = m;
+            mo[new Rectangle(100, 200, 25, 25)] = t;
+            moving[1] = mo;
+            boollist.Add(true);
+            m[1] = boollist.ToList();
+            boollist.Clear();
             start.Add(new Vector2(0, 50)); // LEVEL 1 END
             l.Clear(); // LEVEL 2 START
             startpos.Clear();
@@ -152,6 +172,8 @@ namespace Spel_Projekt_Thor_Grimes
             Rectangle portal2 = new Rectangle(600, 175, 50, 50);
             portalpair[portal1] = portal2;
             portal[2] = portalpair;
+            l.Clear();
+            boollist.Clear(); // LEVEL 2 END
             base.Initialize();
         }
 
@@ -186,6 +208,10 @@ namespace Spel_Projekt_Thor_Grimes
             else if (gamestate == 2)
             {
                 GameUpdate();
+            }
+            else if (gamestate == 3)
+            {
+                LevelCreator();
             }
             void MMUpdate()
             {
@@ -222,6 +248,10 @@ namespace Spel_Projekt_Thor_Grimes
                                 level = int.Parse(strings[1]);
                                 InitializeLevel();
                                 gamestate++;
+                            }
+                            else if (text.Contains("Lev. Creator"))
+                            {
+                                gamestate = 3;
                             }
                         }
                     }
@@ -474,6 +504,52 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                 }
             }
+            void LevelCreator()
+            {
+                if (LCSwall.Contains(mouse.Position))
+                {
+                    if (mouse.LeftButton == ButtonState.Pressed)
+                    {
+                        selectw = true;
+                        time = 0;
+                    }
+                }
+                if (selectw)
+                {
+                    if (clicked)
+                    {
+                        if (oldmousepos.X > mouse.X)
+                        {
+                            LCSwallghost.X = (int)oldmousepos.X;
+                        }
+                        else
+                        {
+                            LCSwallghost.X = mouse.X;
+                        }
+                        if (oldmouse.Y > mouse.Y)
+                        {
+                            LCSwallghost.Y = (int)oldmousepos.Y;
+                        }
+                        else
+                        {
+                            LCSwallghost.Y = mouse.Y;
+                        }
+                        LCSwallghost.Width = Math.Abs((int)oldmousepos.X - mouse.X);
+                        LCSwallghost.Height = Math.Abs((int)oldmousepos.Y - mouse.Y);
+                    }
+                    else
+                    {
+                        if (mouse.LeftButton == ButtonState.Pressed && oldmouse.LeftButton == ButtonState.Released && time != 0)
+                        {
+                            LCSwallghost.X = mouse.X;
+                            LCSwallghost.Y = mouse.Y;
+                            oldmousepos.X = mouse.X;
+                            oldmousepos.Y = mouse.Y;
+                            clicked = true;
+                        }
+                    }
+                }
+            }
             base.Update(gameTime);
         }
 
@@ -542,6 +618,16 @@ namespace Spel_Projekt_Thor_Grimes
                     Rectangle pcurrec = new Rectangle((int)((currec[i].X + pan.X)*zoom), (int)((currec[i].Y + pan.Y)*zoom), (int)(currec[i].Width*zoom), (int)((currec[i].Height)*zoom));
                     spriteBatch.Draw(basic, pcurrec, Color.White);
                 }
+            }
+            else if (gamestate == 3)
+            {
+                spriteBatch.Draw(basic, new Rectangle(0, 400, 800, 80), Color.DarkGray);
+                spriteBatch.Draw(basic, LCSwall, Color.White);
+                spriteBatch.Draw(basic, LCSredspawn, Color.Red);
+                spriteBatch.Draw(basic, LCSbluespawn, Color.Blue);
+                spriteBatch.Draw(basic, LCSyellowspawn, Color.Yellow);
+                spriteBatch.Draw(basic, LCSgreenspawn, Color.Green);
+                spriteBatch.Draw(basic, LCSwallghost, Color.White);
             }
             spriteBatch.End();
             base.Draw(gameTime);
