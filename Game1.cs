@@ -82,6 +82,7 @@ namespace Spel_Projekt_Thor_Grimes
 
         protected override void Initialize()
         {
+            Rectangle wholder = Rectangle.Empty;
             Rectangle holder;
             for (int i = 0; i < 5; i++)
             {
@@ -184,22 +185,24 @@ namespace Spel_Projekt_Thor_Grimes
             Rectangle portal1 = new Rectangle(750, 350, 50, 50);
             Rectangle portal2 = new Rectangle(600, 175, 50, 50);
             portalpair[portal1] = portal2;
-            portal[2] = portalpair;
+            portal[2] = portalpair.ToDictionary();
             l.Clear();
             portalpair.Clear();
             startpos.Clear();
             boollist.Clear(); // LEVEL 2 END
+            
             using (StreamReader sr = File.OpenText("C:\\gitmapp\\Spelprojekt-TG\\SaveData.txt")) // BYT TILL VART *DU* HAR MAPPEN !!!
             {
                 string s = sr.ReadLine();
                 string[] data = s.Split("ÖÄ");
                 string[] walls = data[0].Split("Ö");
                 string[] spawns = data[1].Split('Ö');
-                string[] portals = data[2].Split('Ö');
+                string win = data[2];
+                string[] portals = data[3].Split('Ö');
                 Rectangle rectangle = Rectangle.Empty;
                 Rectangle portals1 = Rectangle.Empty;
                 Rectangle portals2 = Rectangle.Empty;
-                Vector2 vector2 = new Vector2(0,0);
+                Vector2 vector2 = new Vector2(0, 0);
                 for (int i = 0; i < walls.Length; i++)
                 {
                     bool nx = false;
@@ -223,14 +226,14 @@ namespace Spel_Projekt_Thor_Grimes
                         {
                             nw = true;
                         }
-                        if (currentwall[j] == 'G')
+                        if (currentwall[j] == 'g')
                         {
                             nh = true;
                         }
                         if (int.TryParse(currentwall[j].ToString(), out integer))
                         {
                             all = integer;
-                            while (int.TryParse(currentwall[j+1].ToString(), out integer))
+                            while (int.TryParse(currentwall[j + 1].ToString(), out integer))
                             {
                                 all = all * 10 + integer;
                                 j++;
@@ -280,7 +283,7 @@ namespace Spel_Projekt_Thor_Grimes
                         if (int.TryParse(currentspawn[j].ToString(), out integer))
                         {
                             all = integer;
-                            while (int.TryParse(currentspawn[j+1].ToString(), out integer))
+                            while (int.TryParse(currentspawn[j + 1].ToString(), out integer))
                             {
                                 all = all * 10 + integer;
                                 j++;
@@ -301,62 +304,65 @@ namespace Spel_Projekt_Thor_Grimes
                     }
                     startpos.Add(i, new Vector2(vector2.X, vector2.Y));
                 }
-                string win = data[3];
-                for (int i = 0; i < win.Length; i++)
+                for (int j = 0; j < 1; j++)
                 {
                     bool nx = false;
                     bool ny = false;
                     bool nw = false;
                     bool nh = false;
-                    int integer;
-                    int all = 0;
-                    if (win[i] == 'X')
+                    for (int i = 0; i < win.Length; i++)
                     {
-                        nx = true;
-                    }
-                    if (win[i] == 'Y')
-                    {
-                        ny = true;
-                    }
-                    if (win[i] == 'W')
-                    {
-                        nw = true;
-                    }
-                    if (win[i] == 'G')
-                    {
-                        nh = true;
-                    }
-                    if (int.TryParse(win[i].ToString(), out integer))
-                    {
-                        all = integer;
-                        while (int.TryParse(win[i+1].ToString(), out integer))
+                        int integer = 1;
+                        int all = 0;
+                        if (win[i] == 'X')
                         {
-                            all = all * 10 + integer;
-                            i++;
+                            nx = true;
                         }
-                        if (nx)
+                        if (win[i] == 'Y')
                         {
-                            rectangle.X = all;
-                            nx = false;
+                            ny = true;
                         }
-                        else if (ny)
+                        if (win[i] == 'W')
                         {
-                            rectangle.Y = all;
-                            ny = false;
+                            nw = true;
                         }
-                        else if (nw)
+                        if (win[i] == 'g')
                         {
-                            rectangle.Width = all;
-                            nw = false;
+                            nh = true;
                         }
-                        else if (nh)
+
+                        if (int.TryParse(win[i].ToString(), out integer))
                         {
-                            rectangle.Height = all;
-                            nh = false;
+                            all = integer;
+                            while (int.TryParse(win[i + 1].ToString(), out integer))
+                            {
+                                all = all * 10 + integer;
+                                i++;
+                            }
+                            if (nx)
+                            {
+                                wholder.X = all;
+                                nx = false;
+                            }
+                            else if (ny)
+                            {
+                                wholder.Y = all;
+                                ny = false;
+                            }
+                            else if (nw)
+                            {
+                                wholder.Width = all;
+                                nw = false;
+                            }
+                            else if (nh)
+                            {
+                                wholder.Height = all;
+                                nh = false;
+                            }
                         }
                     }
                 }
-                holder = rectangle;
+                rectangle = wholder;
                 for (int i = 0; i < portals.Length; i++)
                 {
                     bool nx = false;
@@ -380,7 +386,7 @@ namespace Spel_Projekt_Thor_Grimes
                         {
                             nw = true;
                         }
-                        if (currentportal[j] == 'G')
+                        if (currentportal[j] == 'g')
                         {
                             nh = true;
                         }
@@ -394,7 +400,7 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                             if (nx)
                             {
-                                if (i % 2 != 0)
+                                if (i % 2 == 0)
                                 {
                                     portal1.X = all;
                                 }
@@ -406,7 +412,7 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                             else if (ny)
                             {
-                                if (i % 2 != 0)
+                                if (i % 2 == 0)
                                 {
                                     portal1.Y = all;
                                 }
@@ -418,7 +424,7 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                             else if (nw)
                             {
-                                if (i % 2 != 0)
+                                if (i % 2 == 0)
                                 {
                                     portal1.Width = all;
                                 }
@@ -430,7 +436,7 @@ namespace Spel_Projekt_Thor_Grimes
                             }
                             else if (nh)
                             {
-                                if (i % 2 != 0)
+                                if (i % 2 == 0)
                                 {
                                     portal1.Height = all;
                                 }
@@ -440,6 +446,7 @@ namespace Spel_Projekt_Thor_Grimes
                                 }
                                 nh = false;
                             }
+
                             if (i != 0 && i % 2 == 0)
                             {
                                 portal1 = portals1;
@@ -450,10 +457,11 @@ namespace Spel_Projekt_Thor_Grimes
                 }
             }
             portalpair[portal1] = portal2;
-            portal[3] = portalpair;
+            portal[3] = portalpair.ToDictionary();
             levellistrectangles[3] = l.ToList();
             startingpos[3] = startpos.ToDictionary();
-            win[3] = holder;
+            win[3] = wholder;
+            
             base.Initialize();
         }
 
@@ -618,20 +626,20 @@ namespace Spel_Projekt_Thor_Grimes
                             var elements = moving[level].ElementAt(j);
                             if (playerav.Intersects(elements.Key))
                             {
+                                hit.Play();
                                 if (playerax.Intersects(elements.Key))
                                 {
                                     velo[i].X *= -1;
-                                    hit.Play();
+                                    
                                 }
                                 else if (playeray.Intersects(elements.Key))
                                 {
                                     velo[i].Y *= -1;
-                                    hit.Play();
+                                    
                                 }
                                 else
                                 {
                                     velo[i] *= -1;
-                                    hit.Play();
                                 }
                             }
                             if (elements.Key.Contains(player[i]))
@@ -651,20 +659,21 @@ namespace Spel_Projekt_Thor_Grimes
                     {
                         if (playerav.Intersects(currec[j]))
                         {
+                            hit.Play();
                             if (playerax.Intersects(currec[j]))
                             {
                                 velo[i].X *= -1;
-                                hit.Play();
+                                
                             }
                             else if (playeray.Intersects(currec[j]))
                             {
                                 velo[i].Y *= -1;
-                                hit.Play();
+                                
                             }
                             else
                             {
                                 velo[i] *= -1;
-                                hit.Play();
+                                
                             }
                             break;
                         }
@@ -678,24 +687,25 @@ namespace Spel_Projekt_Thor_Grimes
                         }
                         if (playerav.Intersects(player2av))
                         {
+                            hit.Play();
                             if (playerax.Intersects(player2av))
                             {
                                 velo[i].X *= -1;
                                 velo[j].X *= -1;
-                                hit.Play();
+                                
                                 continue;
                             }
                             if (playeray.Intersects(player2av))
                             {
                                 velo[i].Y *= -1;
                                 velo[j].Y *= -1;
-                                hit.Play();
+                                
                                 continue;
                             }
                             if (!(playerax.Intersects(player2av)) & !playeray.Intersects(player2av))
                             {
                                 velo[i] *= -1;
-                                hit.Play();
+                                
                             }
                         }
                     }
@@ -866,9 +876,12 @@ namespace Spel_Projekt_Thor_Grimes
                             outputFile.Write("ÖÄ");
                             outputFile.Write(wincreate);
                             outputFile.Write("ÖÄ");
-                            foreach (var item in LCSportals)
+                            for (int i = 0; i < LCSportals.Count(); i++)
                             {
-                                outputFile.Write(item + "Ö");
+                                var element = LCSportals.ElementAt(i);
+                                outputFile.Write(element.Key);
+                                outputFile.Write("Ö");
+                                outputFile.Write(element.Value);
                             }
                         }
                         Exit();
